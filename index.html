@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Circular Slider Demo</title>
+    <meta charset="utf-8" />
+    <script src="/slider.js"></script>
+</head>
+
+<body>
+    <canvas id="container" width="400" height="400"></canvas>
+
+    <script>
+        var container = document.getElementById('container')
+        var options = {
+            'transportation': {
+                color: 'purple',
+                min: 0,
+                max: 1000,
+                step: 10,
+                radius: 100
+            }
+        }
+
+        var sliders = {}
+        for (var sliderName in options) {
+            var sliderOptions = options[sliderName]
+            sliderOptions.container = container
+            var slider = new CircularSlider(sliderOptions)
+            sliders[sliderName] = slider
+        }
+
+        console.log(sliders)
+    </script>
+</body>
+
+</html>
