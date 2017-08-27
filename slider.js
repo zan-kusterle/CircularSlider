@@ -10,7 +10,6 @@ class CircularSlider {
         this.maxValue = options.max
         this.stepValue = options.step
         this.radius = options.radius
-        this.updateValue(200)
 
         let range = this.maxValue - this.minValue
         let numSteps = range / this.stepValue
@@ -27,14 +26,49 @@ class CircularSlider {
             'overlayOpacity': 0.6
         }
 
-        this.setup()
+        this.currentTouches = []
+        let self = this
+        this.container.addEventListener("touchstart", function(e) {
+            self.touchStart(e)
+        }, false)
+        this.container.addEventListener("touchmove", function(e) {
+            self.touchMove(e)
+        }, false)
+        this.container.addEventListener("touchend", function(e) {
+            self.touchEnd(e)
+        }, false)
+        this.container.addEventListener("touchcancel", function(e) {
+            self.touchEnd(e)
+        }, false)
+
+        this.updateValue(200)
     }
 
-    setup() {
-        this.drawSteps()
-        this.drawOverlay()
-        this.drawButton()
+    touchStart(evt) {
+        var touches = evt.changedTouches
+        for (var i = 0; i < touches.length; i++) {
+            this.currentTouches.push(touches[i])
+        }
     }
+
+    touchMove(evt) {
+        let touch = evt.touches[0]
+
+        let x = touch.clientX - this.width / 2
+        let y = touch.clientY - this.height / 2
+        let angle = Math.atan2(y, x) + Math.PI / 2
+        angle = (angle + 2 * Math.PI) % (2 * Math.PI)
+        let ratio = angle / (2 * Math.PI)
+
+        ratio = Math.max(Math.min(ratio, 1), 0)
+        let value = (this.maxValue - this.minValue) * ratio
+
+        let range = (this.maxValue - this.minValue)
+        if (!(this.value < 0.25 * range && value > 0.75 * range || this.value > range * 0.75 && value < range * 0.25))
+            this.updateValue(value)
+    }
+
+    touchEnd(evt) {}
 
     drawSteps() {
         let innerRadius = this.constants['innerRadius']
@@ -95,5 +129,10 @@ class CircularSlider {
     updateValue(newValue) {
         this.value = newValue
         this.angle = (this.value - this.minValue) / (this.maxValue - this.minValue) * 2 * Math.PI - Math.PI / 2
+
+        this.ctx.clearRect(0, 0, this.width, this.height)
+        this.drawSteps()
+        this.drawOverlay()
+        this.drawButton()
     }
 }
