@@ -8,7 +8,8 @@
 </head>
 
 <body>
-    <canvas id="container" width="400" height="400"></canvas>
+    <div id="container">
+    </div>
 
     <script>
         var container = document.getElementById('container')
@@ -18,7 +19,35 @@
                 min: 0,
                 max: 1000,
                 step: 10,
+                radius: 300
+            },
+            'food': {
+                color: 'blue',
+                min: 0,
+                max: 1000,
+                step: 10,
+                radius: 250
+            },
+            'insurance': {
+                color: 'green',
+                min: 0,
+                max: 1000,
+                step: 10,
                 radius: 200
+            },
+            'entertainment': {
+                color: 'orange',
+                min: 0,
+                max: 1000,
+                step: 10,
+                radius: 150
+            },
+            'healthcare': {
+                color: 'red',
+                min: 0,
+                max: 1000,
+                step: 10,
+                radius: 100
             }
         }
 
@@ -27,10 +56,10 @@
             var sliderOptions = options[sliderName]
             sliderOptions.container = container
             var slider = new CircularSlider(sliderOptions)
+
+            slider.setOffset(300 - sliderOptions.radius, 300 - sliderOptions.radius)
             sliders[sliderName] = slider
         }
-
-        console.log(sliders)
     </script>
 </body>
 

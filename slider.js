@@ -1,15 +1,34 @@
 class CircularSlider {
     constructor(options) {
         this.container = options.container
-        this.ctx = this.container.getContext("2d")
-        this.width = this.container.width
-        this.height = this.container.height
 
         this.color = options.color
         this.minValue = options.min
         this.maxValue = options.max
         this.stepValue = options.step
         this.radius = options.radius
+        this.width = this.radius * 2
+        this.height = this.radius * 2
+
+        this.container.style.position = 'relative'
+
+        let canvas = document.createElement('canvas')
+        canvas.width = this.radius * 2
+        canvas.height = this.radius * 2
+        canvas.style.zIndex = 0
+        canvas.style.position = "absolute"
+        this.container.appendChild(canvas)
+        this.backgroundCanvas = canvas
+        this.backgroundCtx = canvas.getContext("2d")
+
+        let canvas2 = document.createElement('canvas')
+        canvas2.width = this.radius * 2
+        canvas2.height = this.radius * 2
+        canvas2.style.zIndex = 1
+        canvas2.style.position = "absolute"
+        this.container.appendChild(canvas2)
+        this.canvas = canvas2
+        this.ctx = canvas2.getContext("2d")
 
         let range = this.maxValue - this.minValue
         let numSteps = range / this.stepValue
@@ -28,20 +47,28 @@ class CircularSlider {
 
         this.currentTouches = []
         let self = this
-        this.container.addEventListener("touchstart", function(e) {
+        this.canvas.addEventListener("touchstart", function(e) {
             self.touchStart(e)
         }, false)
-        this.container.addEventListener("touchmove", function(e) {
+        this.canvas.addEventListener("touchmove", function(e) {
             self.touchMove(e)
         }, false)
-        this.container.addEventListener("touchend", function(e) {
+        this.canvas.addEventListener("touchend", function(e) {
             self.touchEnd(e)
         }, false)
-        this.container.addEventListener("touchcancel", function(e) {
+        this.canvas.addEventListener("touchcancel", function(e) {
             self.touchEnd(e)
         }, false)
 
-        this.updateValue(200)
+        this.drawSteps()
+        this.updateValue(0)
+    }
+
+    setOffset(x, y) {
+        this.backgroundCanvas.style.left = x + 'px'
+        this.backgroundCanvas.style.top = y + 'px'
+        this.canvas.style.left = x + 'px'
+        this.canvas.style.top = y + 'px'
     }
 
     touchStart(evt) {
@@ -76,7 +103,7 @@ class CircularSlider {
         let numSteps = this.constants['numSteps']
         let spacingRatio = this.constants['stepSpacingRatio']
 
-        this.ctx.fillStyle = '#ccc'
+        this.backgroundCtx.fillStyle = '#ccc'
 
         for (var i = 0; i < numSteps; i++) {
             let angle = i / numSteps * 2 * Math.PI
@@ -91,13 +118,13 @@ class CircularSlider {
             let dx = this.width / 2 + Math.cos(toAngle) * innerRadius
             let dy = this.height / 2 + Math.sin(toAngle) * innerRadius
 
-            this.ctx.beginPath()
-            this.ctx.moveTo(ax, ay)
-            this.ctx.lineTo(bx, by)
-            this.ctx.lineTo(cx, cy)
-            this.ctx.lineTo(dx, dy)
-            this.ctx.closePath()
-            this.ctx.fill()
+            this.backgroundCtx.beginPath()
+            this.backgroundCtx.moveTo(ax, ay)
+            this.backgroundCtx.lineTo(bx, by)
+            this.backgroundCtx.lineTo(cx, cy)
+            this.backgroundCtx.lineTo(dx, dy)
+            this.backgroundCtx.closePath()
+            this.backgroundCtx.fill()
         }
     }
 
@@ -131,7 +158,6 @@ class CircularSlider {
         this.angle = (this.value - this.minValue) / (this.maxValue - this.minValue) * 2 * Math.PI - Math.PI / 2
 
         this.ctx.clearRect(0, 0, this.width, this.height)
-        this.drawSteps()
         this.drawOverlay()
         this.drawButton()
     }
