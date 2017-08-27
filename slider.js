@@ -1,5 +1,15 @@
 class CircularSlider {
     constructor(options) {
+        let requestAnimationFrame = window.requestAnimationFrame ||
+            window.mozRequestAnimationFrame ||
+            window.webkitRequestAnimationFrame ||
+            window.msRequestAnimationFrame ||
+            function(f) { return setTimeout(f, 1000 / 60) }
+
+        let cancelAnimationFrame = window.cancelAnimationFrame ||
+            window.mozCancelAnimationFrame ||
+            function(requestID) { clearTimeout(requestID) }
+
         this.container = options.container
 
         this.color = options.color
@@ -9,6 +19,8 @@ class CircularSlider {
         this.radius = options.radius
         this.width = this.radius * 2
         this.height = this.radius * 2
+        this.offsetX = 0
+        this.offsetY = 0
 
         this.container.style.position = 'relative'
 
@@ -32,7 +44,7 @@ class CircularSlider {
 
         let range = this.maxValue - this.minValue
         let numSteps = range / this.stepValue
-        let height = 20
+        let height = 30
         let innerRadius = this.radius - height + 3
         let outerRadius = this.radius - 3
         this.constants = {
@@ -46,56 +58,102 @@ class CircularSlider {
         }
 
         this.currentTouches = []
+        this.isTouching = false
         let self = this
-        this.canvas.addEventListener("touchstart", function(e) {
-            self.touchStart(e)
+        this.container.addEventListener("mousedown", function(e) {
+            self.touchStart(e.clientX, e.clientY)
         }, false)
-        this.canvas.addEventListener("touchmove", function(e) {
-            self.touchMove(e)
+        this.container.addEventListener("mousemove", function(e) {
+            self.touchMove(e.clientX, e.clientY)
         }, false)
-        this.canvas.addEventListener("touchend", function(e) {
-            self.touchEnd(e)
+        this.container.addEventListener("mouseup", function(e) {
+            self.touchEnd(e.clientX, e.clientY)
         }, false)
-        this.canvas.addEventListener("touchcancel", function(e) {
-            self.touchEnd(e)
+        this.container.addEventListener("touchstart", function(e) {
+            self.touchStart(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
+        }, false)
+        this.container.addEventListener("touchmove", function(e) {
+            self.touchMove(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
+        }, false)
+        this.container.addEventListener("touchend", function(e) {
+            self.touchEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
+        }, false)
+        this.container.addEventListener("touchcancel", function(e) {
+            self.touchEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
         }, false)
 
         this.drawSteps()
-        this.updateValue(0)
+        this.targetValue = 0
+        this.updateValue(this.minValue)
+
+        let updateFn = function(time) {
+            self.update(time)
+            requestAnimationFrame(updateFn)
+        }
+        updateFn()
     }
 
     setOffset(x, y) {
+        this.offsetX = x
+        this.offsetY = y
         this.backgroundCanvas.style.left = x + 'px'
         this.backgroundCanvas.style.top = y + 'px'
         this.canvas.style.left = x + 'px'
         this.canvas.style.top = y + 'px'
     }
 
-    touchStart(evt) {
-        var touches = evt.changedTouches
-        for (var i = 0; i < touches.length; i++) {
-            this.currentTouches.push(touches[i])
-        }
+    update(time) {
+        let difference = this.targetValue - this.value
+        if (difference < -5)
+            difference = -Math.pow(-difference, 0.65)
+        else if (difference > 5)
+            difference = Math.pow(difference, 0.65)
+        this.updateValue(this.value + difference)
     }
 
-    touchMove(evt) {
-        let touch = evt.touches[0]
+    touchStart(x, y) {
+        let outerRadius = this.constants['outerRadius'] + 5
+        let innerRadius = this.constants['innerRadius'] - 5
+        let sx = (x - this.offsetX) - this.width / 2
+        let sy = (y - this.offsetY) - this.height / 2
+        let centerDistance = sx * sx + sy * sy
 
-        let x = touch.clientX - this.width / 2
-        let y = touch.clientY - this.height / 2
-        let angle = Math.atan2(y, x) + Math.PI / 2
+        let maxDistance = 2 * this.constants['buttonRadius']
+        let dx = this.buttonX - (x - this.offsetX)
+        let dy = this.buttonY - (y - this.offsetY)
+        if (dx * dx + dy * dy < maxDistance * maxDistance) {
+            this.isTouching = true
+        } else if (centerDistance < outerRadius * outerRadius && centerDistance > innerRadius * innerRadius) {
+            this.isTouching = true
+        }
+        this.touchMove(x, y)
+    }
+
+    touchMove(x, y) {
+        if (!this.isTouching)
+            return
+
+        let sx = (x - this.offsetX) - this.width / 2
+        let sy = (y - this.offsetY) - this.height / 2
+        let angle = Math.atan2(sy, sx) + Math.PI / 2
         angle = (angle + 2 * Math.PI) % (2 * Math.PI)
         let ratio = angle / (2 * Math.PI)
-
         ratio = Math.max(Math.min(ratio, 1), 0)
         let value = (this.maxValue - this.minValue) * ratio
 
-        let range = (this.maxValue - this.minValue)
-        if (!(this.value < 0.25 * range && value > 0.75 * range || this.value > range * 0.75 && value < range * 0.25))
-            this.updateValue(value)
+        let range = this.maxValue - this.minValue
+        if (this.value < 0.25 * range && value > 0.75 * range) {
+            this.targetValue = this.minValue
+        } else if (this.value > range * 0.75 && value < range * 0.25) {
+            this.targetValue = this.maxValue
+        } else {
+            this.targetValue = value
+        }
     }
 
-    touchEnd(evt) {}
+    touchEnd(evt) {
+        this.isTouching = false
+    }
 
     drawSteps() {
         let innerRadius = this.constants['innerRadius']
@@ -133,6 +191,8 @@ class CircularSlider {
 
         let x = this.width / 2 + Math.cos(this.angle) * (this.radius - buttonRadius)
         let y = this.height / 2 + Math.sin(this.angle) * (this.radius - buttonRadius)
+        this.buttonX = x
+        this.buttonY = y
 
         this.ctx.lineWidth = 1
         this.ctx.strokeStyle = '#aaa'
