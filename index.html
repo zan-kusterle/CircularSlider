@@ -5,14 +5,36 @@
     <title>Circular Slider Demo</title>
     <meta charset="utf-8" />
     <script src="/slider.js"></script>
+
+    <style>
+        .container {
+            display: block;
+            width: 100%;
+            height: 500px;
+        }
+        
+        .data {
+            float: left;
+            width: 40%;
+        }
+        
+        .sliders {
+            float: right;
+            width: 60%;
+            position: relative;
+        }
+    </style>
 </head>
 
 <body>
-    <div id="container">
+    <div class="container">
+        <div id="data" class="data"></div>
+        <div id="sliders" class="sliders"></div>
     </div>
 
     <script>
-        var container = document.getElementById('container')
+        var container = document.getElementById('sliders')
+        var dataContainer = document.getElementById('data')
         var options = {
             'transportation': {
                 color: 'purple',
@@ -59,6 +81,17 @@
 
             slider.setOffset(300 - sliderOptions.radius, 300 - sliderOptions.radius)
             sliders[sliderName] = slider
+
+            let sliderData = document.createElement('div')
+            let sliderValue = document.createElement('p')
+            sliderData.appendChild(sliderValue)
+            let sliderText = document.createElement('p')
+            sliderText.innerHTML = sliderName
+            sliderData.appendChild(sliderText)
+            dataContainer.appendChild(sliderData)
+            slider.on('change', function(value) {
+                sliderValue.innerHTML = Math.round(value) + '$'
+            })
         }
     </script>
 </body>

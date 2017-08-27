@@ -19,10 +19,6 @@ class CircularSlider {
         this.radius = options.radius
         this.width = this.radius * 2
         this.height = this.radius * 2
-        this.offsetX = 0
-        this.offsetY = 0
-
-        this.container.style.position = 'relative'
 
         let canvas = document.createElement('canvas')
         canvas.width = this.radius * 2
@@ -60,30 +56,39 @@ class CircularSlider {
         this.currentTouches = []
         this.isTouching = false
         let self = this
-        this.container.addEventListener("mousedown", function(e) {
-            self.touchStart(e.clientX, e.clientY)
+        document.addEventListener("mousedown", function(e) {
+            let rect = self.canvas.getBoundingClientRect()
+            self.touchStart(e.clientX - rect.left, e.clientY - rect.top)
         }, false)
-        this.container.addEventListener("mousemove", function(e) {
-            self.touchMove(e.clientX, e.clientY)
+        document.addEventListener("mousemove", function(e) {
+            let rect = self.canvas.getBoundingClientRect()
+            self.touchMove(e.clientX - rect.left, e.clientY - rect.top)
         }, false)
-        this.container.addEventListener("mouseup", function(e) {
-            self.touchEnd(e.clientX, e.clientY)
+        document.addEventListener("mouseup", function(e) {
+            let rect = self.canvas.getBoundingClientRect()
+            self.touchEnd(e.clientX - rect.left, e.clientY - rect.top)
         }, false)
-        this.container.addEventListener("touchstart", function(e) {
-            self.touchStart(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
+        document.addEventListener("touchstart", function(e) {
+            let rect = self.canvas.getBoundingClientRect()
+            self.touchStart(e.changedTouches[0].clientX - rect.left, e.changedTouches[0].clientY - rect.top)
         }, false)
-        this.container.addEventListener("touchmove", function(e) {
-            self.touchMove(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
+        document.addEventListener("touchmove", function(e) {
+            let rect = self.canvas.getBoundingClientRect()
+            self.touchMove(e.changedTouches[0].clientX - rect.left, e.changedTouches[0].clientY - rect.top)
         }, false)
-        this.container.addEventListener("touchend", function(e) {
-            self.touchEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
+        document.addEventListener("touchend", function(e) {
+            let rect = self.canvas.getBoundingClientRect()
+            self.touchEnd(e.changedTouches[0].clientX - rect.left, e.changedTouches[0].clientY - rect.top)
         }, false)
-        this.container.addEventListener("touchcancel", function(e) {
-            self.touchEnd(e.changedTouches[0].clientX, e.changedTouches[0].clientY)
+        document.addEventListener("touchcancel", function(e) {
+            let rect = self.canvas.getBoundingClientRect()
+            self.touchEnd(e.changedTouches[0].clientX - rect.left, e.changedTouches[0].clientY - rect.top)
         }, false)
 
+        this.onChangeCallbacks = []
+
         this.drawSteps()
-        this.targetValue = 0
+        this.targetValue = this.minValue
         this.updateValue(this.minValue)
 
         let updateFn = function(time) {
@@ -94,19 +99,23 @@ class CircularSlider {
     }
 
     setOffset(x, y) {
-        this.offsetX = x
-        this.offsetY = y
         this.backgroundCanvas.style.left = x + 'px'
         this.backgroundCanvas.style.top = y + 'px'
         this.canvas.style.left = x + 'px'
         this.canvas.style.top = y + 'px'
     }
 
+    on(name, cb) {
+        if (name == 'change') {
+            this.onChangeCallbacks.push(cb)
+        }
+    }
+
     update(time) {
         let difference = this.targetValue - this.value
-        if (difference < -5)
+        if (difference < -this.stepValue)
             difference = -Math.pow(-difference, 0.65)
-        else if (difference > 5)
+        else if (difference > this.stepValue)
             difference = Math.pow(difference, 0.65)
         this.updateValue(this.value + difference)
     }
@@ -114,13 +123,13 @@ class CircularSlider {
     touchStart(x, y) {
         let outerRadius = this.constants['outerRadius'] + 5
         let innerRadius = this.constants['innerRadius'] - 5
-        let sx = (x - this.offsetX) - this.width / 2
-        let sy = (y - this.offsetY) - this.height / 2
+        let sx = x - this.width / 2
+        let sy = y - this.height / 2
         let centerDistance = sx * sx + sy * sy
 
         let maxDistance = 2 * this.constants['buttonRadius']
-        let dx = this.buttonX - (x - this.offsetX)
-        let dy = this.buttonY - (y - this.offsetY)
+        let dx = this.buttonX - x
+        let dy = this.buttonY - y
         if (dx * dx + dy * dy < maxDistance * maxDistance) {
             this.isTouching = true
         } else if (centerDistance < outerRadius * outerRadius && centerDistance > innerRadius * innerRadius) {
@@ -133,8 +142,8 @@ class CircularSlider {
         if (!this.isTouching)
             return
 
-        let sx = (x - this.offsetX) - this.width / 2
-        let sy = (y - this.offsetY) - this.height / 2
+        let sx = x - this.width / 2
+        let sy = y - this.height / 2
         let angle = Math.atan2(sy, sx) + Math.PI / 2
         angle = (angle + 2 * Math.PI) % (2 * Math.PI)
         let ratio = angle / (2 * Math.PI)
@@ -220,5 +229,8 @@ class CircularSlider {
         this.ctx.clearRect(0, 0, this.width, this.height)
         this.drawOverlay()
         this.drawButton()
+
+        for (var i = 0; i < this.onChangeCallbacks.length; i++)
+            this.onChangeCallbacks[i](newValue)
     }
 }
