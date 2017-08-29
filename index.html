@@ -4,24 +4,55 @@
 <head>
     <title>Circular Slider Demo</title>
     <meta charset="utf-8" />
-    <script src="/slider.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <script src="slider.js"></script>
 
     <style>
+        body {
+            font-family: "Arial";
+        }
+        
         .container {
+            margin-top: 80px;
             display: block;
             width: 100%;
             height: 500px;
+            user-select: none;
+            cursor: default;
         }
         
         .data {
             float: left;
-            width: 40%;
+            width: 450px;
+            padding-top: 100px;
         }
         
         .sliders {
             float: right;
-            width: 60%;
+            width: 50%;
             position: relative;
+        }
+        
+        .value {
+            font-family: "Arial Black", Gadget, sans-serif;
+            display: inline-block;
+            font-size: 48px;
+            width: 200px;
+            margin: 0;
+            color: #222;
+        }
+        
+        .block {
+            display: inline-block;
+            width: 20px;
+            height: 14px;
+        }
+        
+        .text {
+            margin: 0;
+            display: inline-block;
+            margin-left: 30px;
+            font-size: 20px;
         }
     </style>
 </head>
@@ -38,38 +69,43 @@
         var options = {
             'transportation': {
                 color: 'purple',
-                min: 0,
+                min: -1000,
                 max: 1000,
-                step: 10,
-                radius: 300
+                step: 50,
+                radius: 300,
+                text: 'Transportation'
             },
             'food': {
                 color: 'blue',
                 min: 0,
                 max: 1000,
                 step: 10,
-                radius: 250
+                radius: 250,
+                text: 'Food'
             },
             'insurance': {
                 color: 'green',
                 min: 0,
                 max: 1000,
                 step: 10,
-                radius: 200
+                radius: 200,
+                text: 'Insurance'
             },
             'entertainment': {
                 color: 'orange',
                 min: 0,
                 max: 1000,
                 step: 20,
-                radius: 150
+                radius: 150,
+                text: 'Entertainment'
             },
             'healthcare': {
                 color: 'red',
                 min: 0,
                 max: 1000,
                 step: 20,
-                radius: 100
+                radius: 100,
+                text: 'Health care'
             }
         }
 
@@ -79,18 +115,33 @@
             sliderOptions.container = container
             var slider = new CircularSlider(sliderOptions)
 
-            slider.setOffset(300 - sliderOptions.radius, 300 - sliderOptions.radius)
             sliders[sliderName] = slider
+
+            let offset = 300 - sliderOptions.radius
+            slider.mainDiv.style.position = 'absolute'
+            slider.mainDiv.style.left = offset + 'px'
+            slider.mainDiv.style.top = offset + 'px'
 
             let sliderData = document.createElement('div')
             let sliderValue = document.createElement('p')
+            sliderValue.className = 'value'
             sliderData.appendChild(sliderValue)
+            let sliderBlock = document.createElement('div')
+            sliderBlock.className = 'block'
+            sliderBlock.style.backgroundColor = sliderOptions.color
+            sliderData.appendChild(sliderBlock)
             let sliderText = document.createElement('p')
-            sliderText.innerHTML = sliderName
+            sliderText.innerHTML = sliderOptions.text
+            sliderText.className = 'text'
             sliderData.appendChild(sliderText)
             dataContainer.appendChild(sliderData)
             slider.on('change', function(value) {
-                sliderValue.innerHTML = Math.round(value) + '$'
+                let max = 9999
+                let base = 10
+                let ratio = value / 1000
+                let expRatio = (Math.pow(base + 1, ratio) - 1) / base
+                let expValue = max * expRatio
+                sliderValue.innerHTML = '$' + Math.round(value)
             })
         }
     </script>
