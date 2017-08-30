@@ -4,32 +4,35 @@
 <head>
     <title>Circular Slider Demo</title>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
     <script src="slider.js"></script>
 
     <style>
         body {
             font-family: "Arial";
+            margin: 0;
+            margin-top: 50px;
+            margin-left: 50px;
         }
         
         .container {
-            margin-top: 80px;
             display: block;
             width: 100%;
-            height: 500px;
             user-select: none;
             cursor: default;
         }
         
         .data {
             float: left;
-            width: 450px;
+            width: 400px;
             padding-top: 100px;
+            margin-right: 50px;
+            margin-bottom: 50px;
         }
         
         .sliders {
-            float: right;
-            width: 50%;
+            float: left;
+            width: 600px;
         }
         
         .value {
@@ -68,16 +71,16 @@
         var options = {
             'transportation': {
                 color: 'purple',
-                min: -1010,
-                max: 1030,
-                step: 50,
+                min: -0,
+                max: 1200,
+                step: 10,
                 radius: 300,
                 text: 'Transportation'
             },
             'food': {
                 color: 'blue',
                 min: 0,
-                max: 1000,
+                max: 1200,
                 step: 10,
                 radius: 250,
                 text: 'Food'
@@ -85,7 +88,7 @@
             'insurance': {
                 color: 'green',
                 min: 0,
-                max: 1000,
+                max: 1200,
                 step: 10,
                 radius: 200,
                 text: 'Insurance'
@@ -93,7 +96,7 @@
             'entertainment': {
                 color: 'orange',
                 min: 0,
-                max: 1000,
+                max: 1200,
                 step: 20,
                 radius: 150,
                 text: 'Entertainment'
@@ -101,7 +104,7 @@
             'healthcare': {
                 color: 'red',
                 min: 0,
-                max: 1000,
+                max: 1200,
                 step: 20,
                 radius: 100,
                 text: 'Health care'

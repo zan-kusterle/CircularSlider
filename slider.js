@@ -48,6 +48,13 @@ class CircularSlider {
 
     setValue(targetValue) {
         if (targetValue != this.targetValue) {
+            if (targetValue <= this.minValue)
+                targetValue = this.minValue
+            else if (targetValue >= this.maxValue)
+                targetValue = this.maxValue
+            else
+                targetValue = Math.round(targetValue / this.stepValue) * this.stepValue
+
             this.targetValue = targetValue
 
             let cbs = this.listeners['set']
@@ -81,8 +88,10 @@ class CircularSlider {
                 window.mozCancelAnimationFrame ||
                 function(requestID) { clearTimeout(requestID) }
 
-            if (this.requestAnimationFrameID)
+            if (this.requestAnimationFrameID) {
                 cancelAnimationFrame(this.requestAnimationFrameID)
+                this.requestAnimationFrameID = null
+            }
         }
     }
 
@@ -111,7 +120,7 @@ class CircularSlider {
             window.mozRequestAnimationFrame ||
             window.webkitRequestAnimationFrame ||
             window.msRequestAnimationFrame ||
-            function(f) { return setTimeout(f, 1000 / 60) }
+            function(f) { return setTimeout(f, 1000 / 30) }
 
         let self = this
         let updateFn = function(time) {
@@ -188,16 +197,19 @@ class CircularSlider {
     _touchStart(x, y) {
         let outerRadius = this.constants['outerRadius'] + 5
         let innerRadius = this.constants['innerRadius'] - 5
-        let sx = x - this.radius
-        let sy = y - this.radius
-        let centerDistance = sx * sx + sy * sy
 
-        let maxDistance = 1.3 * this.constants['buttonRadius']
-        let dx = this.buttonX - x
-        let dy = this.buttonY - y
-        if (dx * dx + dy * dy < maxDistance * maxDistance) {
+        let centerX = x - this.radius
+        let centerY = y - this.radius
+        let centerDistanceSq = centerX * centerX + centerY * centerY
+
+        let buttonDx = this.buttonX - x
+        let buttonDy = this.buttonY - y
+        let buttonDistanceSq = buttonDx * buttonDx + buttonDy * buttonDy
+        let maxButtonDistance = 1.3 * this.constants['buttonRadius']
+
+        if (buttonDistanceSq < maxButtonDistance * maxButtonDistance) {
             this.isTouching = true
-        } else if (centerDistance < outerRadius * outerRadius && centerDistance > innerRadius * innerRadius) {
+        } else if (centerDistanceSq < outerRadius * outerRadius && centerDistanceSq > innerRadius * innerRadius) {
             this.isTouching = true
         }
         this._touchMove(x, y)
@@ -208,21 +220,19 @@ class CircularSlider {
         if (!this.isTouching)
             return false
 
-        let sx = x - this.radius
-        let sy = y - this.radius
-        let angle = Math.atan2(sy, sx) + Math.PI / 2
+        let centerX = x - this.radius
+        let centerY = y - this.radius
+        let angle = Math.atan2(centerY, centerX) + Math.PI / 2
+
         angle = (angle + 2 * Math.PI) % (2 * Math.PI)
-        let ratio = angle / (2 * Math.PI)
-        ratio = Math.max(Math.min(ratio, 1), 0)
+        let ratio = Math.max(Math.min(angle / (2 * Math.PI), 1), 0)
 
         if (this.ratio < 0.3 && ratio > 0.9) {
             this.setValue(this.minValue)
         } else if (this.ratio > 0.7 && ratio < 0.1) {
             this.setValue(this.maxValue)
         } else {
-            let value = (this.maxValue - this.minValue) * ratio + this.minValue
-            let fixedValue = Math.round(value / this.stepValue) * this.stepValue
-            this.setValue(fixedValue)
+            this.setValue((this.maxValue - this.minValue) * ratio + this.minValue)
         }
         return true
     }
