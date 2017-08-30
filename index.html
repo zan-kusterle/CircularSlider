@@ -30,7 +30,6 @@
         .sliders {
             float: right;
             width: 50%;
-            position: relative;
         }
         
         .value {
@@ -69,8 +68,8 @@
         var options = {
             'transportation': {
                 color: 'purple',
-                min: -1000,
-                max: 1000,
+                min: -1010,
+                max: 1030,
                 step: 50,
                 radius: 300,
                 text: 'Transportation'
@@ -109,14 +108,7 @@
             }
         }
 
-        var sliders = {}
-        for (var sliderName in options) {
-            var sliderOptions = options[sliderName]
-            sliderOptions.container = container
-            var slider = new CircularSlider(sliderOptions)
-
-            sliders[sliderName] = slider
-
+        let initSlider = function(slider) {
             let offset = 300 - sliderOptions.radius
             slider.mainDiv.style.position = 'absolute'
             slider.mainDiv.style.left = offset + 'px'
@@ -136,13 +128,23 @@
             sliderData.appendChild(sliderText)
             dataContainer.appendChild(sliderData)
             slider.on('change', function(value) {
-                let max = 9999
-                let base = 10
-                let ratio = value / 1000
-                let expRatio = (Math.pow(base + 1, ratio) - 1) / base
-                let expValue = max * expRatio
                 sliderValue.innerHTML = '$' + Math.round(value)
             })
+
+            setTimeout(function() {
+                // slider.destroy()
+            }, 5000)
+        }
+
+        var sliders = {}
+        for (var sliderName in options) {
+            var sliderOptions = options[sliderName]
+            sliderOptions.container = container
+            var slider = new CircularSlider(sliderOptions)
+
+            sliders[sliderName] = slider
+
+            initSlider(slider)
         }
     </script>
 </body>

@@ -7,44 +7,56 @@ class CircularSlider {
         this.stepValue = options.step
         this.radius = options.radius
 
+        if (!(this.container instanceof HTMLElement))
+            throw 'Container must be a DOM element'
+        if (this.minValue >= this.maxValue)
+            throw 'Minimum value must be less than maximum value'
+        if (this.radius < 50)
+            throw 'Radius must be at least 50px'
+        if (this.stepValue <= 0)
+            throw 'Step value must be positive'
+
+        this.container.style.position = 'relative'
+
         this._createChild()
 
         this.constants = this._getConstants()
 
+        this.listeners = {
+            set: [],
+            change: []
+        }
+        this.isTouching = false
+
         this._handleEvents()
 
-        this.onChangeCallbacks = []
-
         this._drawSteps(this.backgroundCtx)
-        this.targetValue = this.minValue
         this.setValue(this.minValue)
+        this.setExactValue(this.minValue)
 
-        let requestAnimationFrame = window.requestAnimationFrame ||
-            window.mozRequestAnimationFrame ||
-            window.webkitRequestAnimationFrame ||
-            window.msRequestAnimationFrame ||
-            function(f) { return setTimeout(f, 1000 / 60) }
-
-        let cancelAnimationFrame = window.cancelAnimationFrame ||
-            window.mozCancelAnimationFrame ||
-            function(requestID) { clearTimeout(requestID) }
-
-        let self = this
-        let updateFn = function(time) {
-            self._update(time)
-            requestAnimationFrame(updateFn)
-        }
-        updateFn()
+        this._startUpdating()
     }
 
     on(name, cb) {
-        if (name == 'change') {
-            this.onChangeCallbacks.push(cb)
+        this.listeners[name].push(cb)
+
+        if (name == 'set')
+            cb(this.targetValue)
+        else if (name == 'change')
             cb(this.value)
+    }
+
+    setValue(targetValue) {
+        if (targetValue != this.targetValue) {
+            this.targetValue = targetValue
+
+            let cbs = this.listeners['set']
+            for (var i = 0; i < cbs.length; i++)
+                cbs[i](this.targetValue)
         }
     }
 
-    setValue(newValue) {
+    setExactValue(newValue) {
         if (newValue != this.value) {
             this.value = newValue
             this.ratio = (this.value - this.minValue) / (this.maxValue - this.minValue)
@@ -54,14 +66,29 @@ class CircularSlider {
             this._drawOverlay(this.ctx)
             this._drawButton(this.ctx)
 
-            for (var i = 0; i < this.onChangeCallbacks.length; i++)
-                this.onChangeCallbacks[i](newValue)
+            let cbs = this.listeners['change']
+            for (var i = 0; i < cbs.length; i++)
+                cbs[i](this.value)
+        }
+    }
+
+    destroy() {
+        if (this.mainDiv) {
+            this.container.removeChild(this.mainDiv)
+            this.mainDiv = null
+
+            let cancelAnimationFrame = window.cancelAnimationFrame ||
+                window.mozCancelAnimationFrame ||
+                function(requestID) { clearTimeout(requestID) }
+
+            if (this.requestAnimationFrameID)
+                cancelAnimationFrame(this.requestAnimationFrameID)
         }
     }
 
     _getConstants() {
         let range = this.maxValue - this.minValue
-        let numSteps = range / this.stepValue
+        let numSteps = Math.floor(range / this.stepValue)
         let height = 30
         let innerRadius = this.radius - height - 5
         let outerRadius = this.radius - 5
@@ -79,6 +106,21 @@ class CircularSlider {
         }
     }
 
+    _startUpdating() {
+        let requestAnimationFrame = window.requestAnimationFrame ||
+            window.mozRequestAnimationFrame ||
+            window.webkitRequestAnimationFrame ||
+            window.msRequestAnimationFrame ||
+            function(f) { return setTimeout(f, 1000 / 60) }
+
+        let self = this
+        let updateFn = function(time) {
+            self._update(time)
+            self.requestAnimationFrameID = requestAnimationFrame(updateFn)
+        }
+        updateFn()
+    }
+
     _update(time) {
         let difference = this.targetValue - this.value
         if (difference < -this.stepValue)
@@ -88,44 +130,58 @@ class CircularSlider {
         else
             difference = Math.max(-this.stepValue / 10, Math.min(this.stepValue / 10, difference))
 
-        this.setValue(this.value + difference)
+        this.setExactValue(this.value + difference)
     }
 
     _handleEvents() {
-        this.currentTouches = []
-        this.isTouching = false
         let self = this
         document.addEventListener("mousedown", function(e) {
             let rect = self.canvas.getBoundingClientRect()
-            self._touchStart(e.clientX - rect.left, e.clientY - rect.top)
+            if (self._touchStart(e.clientX - rect.left, e.clientY - rect.top))
+                e.preventDefault()
         }, false)
         document.addEventListener("mousemove", function(e) {
             let rect = self.canvas.getBoundingClientRect()
-            self._touchMove(e.clientX - rect.left, e.clientY - rect.top)
+            if (self._touchMove(e.clientX - rect.left, e.clientY - rect.top))
+                e.preventDefault()
         }, false)
         document.addEventListener("mouseup", function(e) {
             let rect = self.canvas.getBoundingClientRect()
-            self._touchEnd(e.clientX - rect.left, e.clientY - rect.top)
-        }, false)
-        document.addEventListener("mouseleave", function(e) {
-            let rect = self.canvas.getBoundingClientRect()
-            self._touchEnd(e.clientX - rect.left, e.clientY - rect.top)
+            if (self._touchEnd(e.clientX - rect.left, e.clientY - rect.top))
+                e.preventDefault()
         }, false)
         document.addEventListener("touchstart", function(e) {
             let rect = self.canvas.getBoundingClientRect()
-            self._touchStart(e.changedTouches[0].clientX - rect.left, e.changedTouches[0].clientY - rect.top)
+            for (var i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i]
+                if (self._touchStart(touch.clientX - rect.left, touch.clientY - rect.top))
+                    e.preventDefault()
+            }
         }, false)
         document.addEventListener("touchmove", function(e) {
             let rect = self.canvas.getBoundingClientRect()
-            self._touchMove(e.changedTouches[0].clientX - rect.left, e.changedTouches[0].clientY - rect.top)
+            for (var i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i]
+                if (self._touchMove(touch.clientX - rect.left, touch.clientY - rect.top))
+                    e.preventDefault()
+            }
         }, false)
         document.addEventListener("touchend", function(e) {
             let rect = self.canvas.getBoundingClientRect()
-            self._touchEnd(e.changedTouches[0].clientX - rect.left, e.changedTouches[0].clientY - rect.top)
+            for (var i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i]
+                if (self._touchEnd(touch.clientX - rect.left, touch.clientY - rect.top))
+                    e.preventDefault()
+            }
+
         }, false)
         document.addEventListener("touchcancel", function(e) {
             let rect = self.canvas.getBoundingClientRect()
-            self._touchEnd(e.changedTouches[0].clientX - rect.left, e.changedTouches[0].clientY - rect.top)
+            for (var i = 0; i < e.changedTouches.length; i++) {
+                let touch = e.changedTouches[i]
+                if (self._touchEnd(touch.clientX - rect.left, touch.clientY - rect.top))
+                    e.preventDefault()
+            }
         }, false)
     }
 
@@ -136,7 +192,7 @@ class CircularSlider {
         let sy = y - this.radius
         let centerDistance = sx * sx + sy * sy
 
-        let maxDistance = 1.2 * this.constants['buttonRadius']
+        let maxDistance = 1.3 * this.constants['buttonRadius']
         let dx = this.buttonX - x
         let dy = this.buttonY - y
         if (dx * dx + dy * dy < maxDistance * maxDistance) {
@@ -145,11 +201,12 @@ class CircularSlider {
             this.isTouching = true
         }
         this._touchMove(x, y)
+        return this.isTouching
     }
 
     _touchMove(x, y) {
         if (!this.isTouching)
-            return
+            return false
 
         let sx = x - this.radius
         let sy = y - this.radius
@@ -159,18 +216,24 @@ class CircularSlider {
         ratio = Math.max(Math.min(ratio, 1), 0)
 
         if (this.ratio < 0.3 && ratio > 0.9) {
-            this.targetValue = this.minValue
+            this.setValue(this.minValue)
         } else if (this.ratio > 0.7 && ratio < 0.1) {
-            this.targetValue = this.maxValue
+            this.setValue(this.maxValue)
         } else {
             let value = (this.maxValue - this.minValue) * ratio + this.minValue
             let fixedValue = Math.round(value / this.stepValue) * this.stepValue
-            this.targetValue = fixedValue
+            this.setValue(fixedValue)
         }
+        return true
     }
 
-    _touchEnd(evt) {
-        this.isTouching = false
+    _touchEnd(x, y) {
+        if (this.isTouching) {
+            this.isTouching = false
+            return true
+        } else {
+            return false
+        }
     }
 
     _createChild() {
@@ -178,17 +241,17 @@ class CircularSlider {
         backgroundCanvas.width = this.radius * 2
         backgroundCanvas.height = this.radius * 2
         backgroundCanvas.style.zIndex = 0
-        backgroundCanvas.style.position = "absolute"
+        backgroundCanvas.style.position = 'absolute'
         this.backgroundCanvas = backgroundCanvas
-        this.backgroundCtx = backgroundCanvas.getContext("2d")
+        this.backgroundCtx = backgroundCanvas.getContext('2d')
 
         let canvas = document.createElement('canvas')
         canvas.width = this.radius * 2
         canvas.height = this.radius * 2
         canvas.style.zIndex = 1
-        canvas.style.position = "absolute"
+        canvas.style.position = 'absolute'
         this.canvas = canvas
-        this.ctx = canvas.getContext("2d")
+        this.ctx = canvas.getContext('2d')
 
         let mainDiv = document.createElement('div')
         mainDiv.appendChild(backgroundCanvas)
@@ -209,20 +272,11 @@ class CircularSlider {
             let angle = i / numSteps * 2 * Math.PI
             let toAngle = (i + 1 - spacingRatio) / numSteps * 2 * Math.PI
 
-            let ax = this.radius + Math.cos(angle) * innerRadius
-            let ay = this.radius + Math.sin(angle) * innerRadius
-            let bx = this.radius + Math.cos(angle) * outerRadius
-            let by = this.radius + Math.sin(angle) * outerRadius
-            let cx = this.radius + Math.cos(toAngle) * outerRadius
-            let cy = this.radius + Math.sin(toAngle) * outerRadius
-            let dx = this.radius + Math.cos(toAngle) * innerRadius
-            let dy = this.radius + Math.sin(toAngle) * innerRadius
-
             ctx.beginPath()
-            ctx.moveTo(ax, ay)
-            ctx.lineTo(bx, by)
-            ctx.lineTo(cx, cy)
-            ctx.lineTo(dx, dy)
+            ctx.moveTo(this.radius + Math.cos(angle) * innerRadius, this.radius + Math.sin(angle) * innerRadius)
+            ctx.lineTo(this.radius + Math.cos(angle) * outerRadius, this.radius + Math.sin(angle) * outerRadius)
+            ctx.lineTo(this.radius + Math.cos(toAngle) * outerRadius, this.radius + Math.sin(toAngle) * outerRadius)
+            ctx.lineTo(this.radius + Math.cos(toAngle) * innerRadius, this.radius + Math.sin(toAngle) * innerRadius)
             ctx.closePath()
             ctx.fill()
         }
