@@ -112,7 +112,7 @@
             }
         }
 
-        let initSlider = function(slider) {
+        let initSlider = function(slider, sliderOptions) {
             let offset = 300 - sliderOptions.radius
             slider.mainDiv.style.position = 'absolute'
             slider.mainDiv.style.left = offset + 'px'
@@ -148,7 +148,7 @@
 
             sliders[sliderName] = slider
 
-            initSlider(slider)
+            initSlider(slider, sliderOptions)
         }
     </script>
 </body>
