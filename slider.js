@@ -16,8 +16,6 @@ class CircularSlider {
         if (this.stepValue <= 0)
             throw 'Step value must be positive'
 
-        this.container.style.position = 'relative'
-
         this._createChild()
 
         this.constants = this._getConstants()
@@ -32,7 +30,7 @@ class CircularSlider {
 
         this._drawSteps(this.backgroundCtx)
         this.setValue(this.minValue)
-        this.setExactValue(this.minValue)
+        this._setExactValue(this.minValue)
 
         this._startUpdating()
     }
@@ -60,22 +58,6 @@ class CircularSlider {
             let cbs = this.listeners['set']
             for (var i = 0; i < cbs.length; i++)
                 cbs[i](this.targetValue)
-        }
-    }
-
-    setExactValue(newValue) {
-        if (newValue != this.value) {
-            this.value = newValue
-            this.ratio = (this.value - this.minValue) / (this.maxValue - this.minValue)
-            this.angle = this.ratio * 2 * Math.PI - Math.PI / 2
-
-            this.ctx.clearRect(0, 0, this.radius * 2, this.radius * 2)
-            this._drawOverlay(this.ctx)
-            this._drawButton(this.ctx)
-
-            let cbs = this.listeners['change']
-            for (var i = 0; i < cbs.length; i++)
-                cbs[i](this.value)
         }
     }
 
@@ -123,23 +105,42 @@ class CircularSlider {
             function(f) { return setTimeout(f, 1000 / 30) }
 
         let self = this
+        let previousTime = Date.now()
         let updateFn = function(time) {
-            self._update(time)
+            let current = Date.now()
+            self._update(current - previousTime)
+            previousTime = current
             self.requestAnimationFrameID = requestAnimationFrame(updateFn)
         }
-        updateFn()
+        this.requestAnimationFrameID = requestAnimationFrame(updateFn)
     }
 
-    _update(time) {
-        let difference = this.targetValue - this.value
-        if (difference < -this.stepValue)
-            difference = -Math.pow(-difference, 0.6)
-        else if (difference > this.stepValue)
-            difference = Math.pow(difference, 0.6)
+    _update(elapsed) {
+        let velocity = this.targetValue - this.value
+        if (velocity < -this.stepValue)
+            velocity = -Math.pow(-velocity, 0.6)
+        else if (velocity > this.stepValue)
+            velocity = Math.pow(velocity, 0.6)
         else
-            difference = Math.max(-this.stepValue / 10, Math.min(this.stepValue / 10, difference))
+            velocity = Math.max(-this.stepValue / 10, Math.min(this.stepValue / 10, velocity))
 
-        this.setExactValue(this.value + difference)
+        this._setExactValue(this.value + velocity * elapsed / 30)
+    }
+
+    _setExactValue(newValue) {
+        if (newValue != this.value) {
+            this.value = newValue
+            this.ratio = (this.value - this.minValue) / (this.maxValue - this.minValue)
+            this.angle = this.ratio * 2 * Math.PI - Math.PI / 2
+
+            this.ctx.clearRect(0, 0, this.radius * 2, this.radius * 2)
+            this._drawOverlay(this.ctx)
+            this._drawButton(this.ctx)
+
+            let cbs = this.listeners['change']
+            for (var i = 0; i < cbs.length; i++)
+                cbs[i](this.value)
+        }
     }
 
     _handleEvents() {
