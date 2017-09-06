@@ -106,7 +106,7 @@
                 color: 'red',
                 min: 0,
                 max: 1200,
-                step: 20,
+                step: 40,
                 radius: 100,
                 text: 'Health care'
             }
@@ -114,9 +114,9 @@
 
         let initSlider = function(slider, sliderOptions) {
             let offset = 300 - sliderOptions.radius
-            slider.mainDiv.style.position = 'absolute'
-            slider.mainDiv.style.left = offset + 'px'
-            slider.mainDiv.style.top = offset + 'px'
+            slider.container.style.position = 'absolute'
+            slider.container.style.left = offset + 'px'
+            slider.container.style.top = offset + 'px'
 
             let sliderData = document.createElement('div')
             let sliderValue = document.createElement('p')
