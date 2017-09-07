@@ -55,7 +55,7 @@ class CircularSlider {
 
             this._targetValue = targetValue
 
-            let cbs = this._listeners['set']
+            let cbs = this._listeners.set
             for (var i = 0; i < cbs.length; i++)
                 cbs[i](this._targetValue)
         }
@@ -116,15 +116,14 @@ class CircularSlider {
     }
 
     _update(elapsed) {
-        let velocity = this._targetValue - this.value
-        if (velocity < -this.stepValue)
-            velocity = -Math.pow(-velocity, 0.6)
-        else if (velocity > this.stepValue)
-            velocity = Math.pow(velocity, 0.6)
-        else
-            velocity = Math.max(-this.stepValue / 10, Math.min(this.stepValue / 10, velocity))
+        let difference = this._targetValue - this.value
+        let speed = Math.pow(Math.max(this.stepValue / 10, Math.abs(difference)), 0.65)
+        let delta = speed * elapsed / 30
 
-        this._setExactValue(this.value + velocity * elapsed / 30)
+        if (Math.abs(difference) <= delta)
+            this._setExactValue(this._targetValue)
+        else
+            this._setExactValue(this.value + Math.sign(difference) * delta)
     }
 
     _setExactValue(newValue) {
@@ -139,7 +138,7 @@ class CircularSlider {
             this._drawOverlay(this._ctx)
             this._drawButton(this._ctx)
 
-            let cbs = this._listeners['change']
+            let cbs = this._listeners.change
             for (var i = 0; i < cbs.length; i++)
                 cbs[i](this.value)
         }
